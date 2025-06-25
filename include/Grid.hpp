@@ -20,23 +20,25 @@ class Grid {
         int get(int row, int col) const;
         void set(int row, int col, int val);
         CellState getCellState(int row, int col) const;
+        void setCellState(int row, int col, CellState state);
         void reset();
 
         // reading input
         void loadFromStrings(const std::vector<std::string>& input);
-        std::vector<std::string> readPuzzleFromConsole();
+        static std::vector<std::string> readPuzzleFromConsole();
 
         // checkers
         bool isValid() const;
         bool isComplete() const;
 
-        // helpers
-        int getBoxIndex(int row, int col) const;
-
         // visualization
         void printBoard() const;
         void prettyPrintBoard() const;
     private:
+        // data
         std::array<std::array<int, GRID_SIZE>, GRID_SIZE> cells;
         std::array<std::array<CellState, GRID_SIZE>, GRID_SIZE> cellStates;
+
+        // helpers
+        static int getBoxIndex(int row, int col);
 };

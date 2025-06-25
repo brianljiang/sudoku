@@ -1,5 +1,7 @@
 #include "Grid.hpp"
 
+// TODO: add error handling
+
 Grid::Grid() {
     for (int row = 0; row < GRID_SIZE; ++row) {
         for (int col = 0; col < GRID_SIZE; ++col) {
@@ -57,6 +59,10 @@ CellState Grid::getCellState(int row, int col) const {
     return cellStates[row][col];
 }
 
+void Grid::setCellState(int row, int col, CellState state) {
+    cellStates[row][col] = state;
+}
+
 bool Grid::isValid() const {
     bool row[GRID_SIZE][GRID_SIZE] = {};
     bool col[GRID_SIZE][GRID_SIZE] = {};
@@ -91,7 +97,7 @@ bool Grid::isComplete() const {
     return isValid();
 }
 
-int Grid::getBoxIndex(int row, int col) const {
+int Grid::getBoxIndex(int row, int col) {
     return (row / SUBGRID_SIZE) * SUBGRID_SIZE + (col / SUBGRID_SIZE);
 }
 

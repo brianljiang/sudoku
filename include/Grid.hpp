@@ -16,7 +16,7 @@ class Grid {
 
         Grid();
 
-        // core functionality (will be used when playing the game, not used in initializations)
+        // core functionality 
         int get(int row, int col) const;
         void set(int row, int col, int val);
         CellState getCellState(int row, int col) const;

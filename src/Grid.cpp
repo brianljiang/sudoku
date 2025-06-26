@@ -33,12 +33,11 @@ void Grid::reset() {
 
 void Grid::loadFromStrings(const std::vector<std::string>& input) {
     for (int row = 0; row < GRID_SIZE; ++row) {
-        for (int col = 0; col < GRID_SIZE; ++col) {
-            char c = input[row][col];
-            cells[row][col] = c - '0';  
-            if (c != '0') {
-                cellStates[row][col] = CellState::Fixed; 
-            }
+        const std::string& line = input[row];
+        for (int col = 0; col < 9; ++col) {
+            int val = line[col] - '0';
+            cells[row][col] = val;
+            cellStates[row][col] = static_cast<CellState>(val != 0);
         }
     }
 }
@@ -87,9 +86,9 @@ bool Grid::isValid() const {
 }
 
 bool Grid::isComplete() const {
-    for (const auto& row : cells) {      
-        for (int cell : row) {
-            if (cell == EMPTY) {
+    for (int row = 0; row < GRID_SIZE; ++row) {
+        for (int col = 0; col < GRID_SIZE; ++col) {
+            if (cells[row][col] == EMPTY) {
                 return false;
             }
         }

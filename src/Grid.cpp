@@ -12,10 +12,19 @@ Grid::Grid() {
 };
 
 int Grid::get(int row, int col) const {
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
+        throw std::out_of_range("Grid::get - Row or column index out of bounds");
+    }
     return cells[row][col];
 }
 
 void Grid::set(int row, int col, int val) {
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
+        throw std::out_of_range("Grid::set - Row or column index out of bounds");
+    }
+    if (val < 0 || val > GRID_SIZE) {
+        throw std::invalid_argument("Grid::set - Value must be between 0 and 9");
+    }
     if (cellStates[row][col] == CellState::Editable) {
         cells[row][col] = val;
     }
@@ -32,10 +41,31 @@ void Grid::reset() {
 }
 
 void Grid::loadFromStrings(const std::vector<std::string>& input) {
+    if (input.size() != GRID_SIZE) {
+        throw std::invalid_argument("Grid::loadFromStrings - Input must have exactly 9 lines");
+    }
+
     for (int row = 0; row < GRID_SIZE; ++row) {
         const std::string& line = input[row];
-        for (int col = 0; col < 9; ++col) {
-            int val = line[col] - '0';
+
+        if (line.length() != GRID_SIZE) {
+            throw std::invalid_argument(
+                "Grid::loadFromStrings - Each line must have exactly 9 characters. "
+                "Line " + std::to_string(row + 1) + " has " + 
+                std::to_string(line.length()) + " characters"
+            );
+        }
+
+        for (int col = 0; col < GRID_SIZE; ++col) {
+            char c = line[col];
+            if (c < '0' || c > '9') {
+                throw std::invalid_argument(
+                    "Grid::loadFromStrings - All characters must be digits 0-9. "
+                    "Found '" + std::string(1, c) + "' at row " + 
+                    std::to_string(row + 1) + ", column " + std::to_string(col + 1)
+                );
+            }
+            int val = c - '0';
             cells[row][col] = val;
             cellStates[row][col] = static_cast<CellState>(val != 0);
         }
@@ -44,11 +74,36 @@ void Grid::loadFromStrings(const std::vector<std::string>& input) {
 
 std::vector<std::string> Grid::readPuzzleFromConsole() {
     std::vector<std::string> puzzle;
-    std::cout << "Enter the Sudoku puzzle (9 lines of 9 digits each):\n";
+    std::cout << "Enter the Sudoku puzzle (9 lines of 9 digits each, use 0 for empty cells):\n";
     
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < GRID_SIZE; ++i) {
         std::string line;
-        std::getline(std::cin, line);
+        while (true) {
+            std::cout << "Row " << (i + 1) << ": ";
+            std::getline(std::cin, line);
+            
+            line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+            
+            if (line.length() != GRID_SIZE) {
+                std::cout << "Error: Each line must have exactly 9 digits. Try again.\n";
+                continue;
+            }
+            
+            bool valid = true;
+            for (char c : line) {
+                if (c < '0' || c > '9') {
+                    valid = false;
+                    break;
+                }
+            }
+            
+            if (!valid) {
+                std::cout << "Error: Only digits 0-9 are allowed. Try again.\n";
+                continue;
+            }
+            
+            break;
+        }
         puzzle.push_back(line);
     }
     return puzzle;

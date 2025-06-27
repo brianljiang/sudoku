@@ -5,6 +5,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <algorithm>
 
 enum class CellState { Editable, Fixed };
 
@@ -40,5 +41,5 @@ class Grid {
         std::array<std::array<CellState, GRID_SIZE>, GRID_SIZE> cellStates;
 
         // helpers
-        static int getBoxIndex(int row, int col);
+        static constexpr int getBoxIndex(int row, int col);
 };

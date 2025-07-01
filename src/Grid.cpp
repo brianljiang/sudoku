@@ -1,15 +1,16 @@
 #include "Grid.hpp"
 
-// TODO: add error handling
+const std::set<int> Grid::ALL_CANDIDATES = {1,2,3,4,5,6,7,8,9}; 
 
 Grid::Grid() {
     for (int row = 0; row < GRID_SIZE; ++row) {
         for (int col = 0; col < GRID_SIZE; ++col) {
             cells[row][col] = EMPTY;
             cellStates[row][col] = CellState::Editable;
+            candidates[row][col] = ALL_CANDIDATES;
         }
     }
-};
+}
 
 int Grid::get(int row, int col) const {
     if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
@@ -27,6 +28,13 @@ void Grid::set(int row, int col, int val) {
     }
     if (cellStates[row][col] == CellState::Editable) {
         cells[row][col] = val;
+        if (val != EMPTY) {
+            candidates[row][col].clear(); 
+        } 
+        else {
+            candidates[row][col] = ALL_CANDIDATES;  
+        }
+        updateAllCandidates(); 
     }
 }
 
@@ -35,9 +43,11 @@ void Grid::reset() {
         for (int col = 0; col < GRID_SIZE; ++col) {
             if (cellStates[row][col] == CellState::Editable) {
                 cells[row][col] = EMPTY;
+                candidates[row][col] = ALL_CANDIDATES;
             }
         }
     }
+    updateAllCandidates();
 }
 
 void Grid::loadFromStrings(const std::vector<std::string>& input) {
@@ -67,7 +77,7 @@ void Grid::loadFromStrings(const std::vector<std::string>& input) {
             }
             int val = c - '0';
             cells[row][col] = val;
-            cellStates[row][col] = static_cast<CellState>(val != 0);
+            cellStates[row][col] = (val != 0) ? CellState::Fixed : CellState::Editable;
         }
     }
 }
@@ -117,6 +127,81 @@ void Grid::setCellState(int row, int col, CellState state) {
     cellStates[row][col] = state;
 }
 
+const std::set<int>& Grid::getCandidates(int row, int col) const {
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
+        throw std::out_of_range("Grid::getCandidates - Row or column index out of bounds");
+    }
+    return candidates[row][col];
+}
+
+void Grid::updateCandidatesForCell(int row, int col) {
+    if (cells[row][col] != EMPTY) {
+        candidates[row][col].clear();
+        return;
+    }
+
+    std::set<int> possible = ALL_CANDIDATES;
+
+    for (int c = 0; c < GRID_SIZE; ++c) {
+        possible.erase(cells[row][c]);
+    }
+
+    for (int r = 0; r < GRID_SIZE; ++r) {
+        possible.erase(cells[r][col]);
+    }
+
+    int boxStartRow = (row / SUBGRID_SIZE) * SUBGRID_SIZE;
+    int boxStartCol = (col / SUBGRID_SIZE) * SUBGRID_SIZE;
+
+    for (int r = 0; r < SUBGRID_SIZE; ++r) {
+        for (int c = 0; c < SUBGRID_SIZE; ++c) {
+            possible.erase(cells[boxStartRow + r][boxStartCol + c]);
+        }
+    }
+
+    candidates[row][col] = std::move(possible);
+}
+
+void Grid::setCandidates(int row, int col, const std::set<int>& newCandidates) {
+    if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+        candidates[row][col] = newCandidates;
+    }
+}
+
+void Grid::clearCellCandidates(int row, int col) {
+    candidates[row][col].clear();
+}
+
+void Grid::clearCandidates() {
+    for (int r = 0; r < GRID_SIZE; ++r) {
+        for (int c = 0; c < GRID_SIZE; ++c) {
+            candidates[r][c].clear();
+        }
+    }
+}
+
+void Grid::toggleCandidate(int row, int col, int digit) {
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
+        throw std::out_of_range("Grid::toggleCandidate - Row or column index out of bounds");
+    }
+
+    if (digit < 0 || digit > GRID_SIZE) {
+        throw std::invalid_argument("Grid::toggleCandidate - Digit must be between 0 and 9");
+    }
+
+    if (cells[row][col] != EMPTY) {
+        return;
+    }
+
+    std::set<int> &cellCandidates = candidates[row][col];
+    if (cellCandidates.count(digit)) {
+        cellCandidates.erase(digit);
+    } 
+    else {
+        cellCandidates.insert(digit);
+    }
+}
+
 bool Grid::isValid() const {
     bool row[GRID_SIZE][GRID_SIZE] = {};
     bool col[GRID_SIZE][GRID_SIZE] = {};
@@ -125,10 +210,10 @@ bool Grid::isValid() const {
     for (int i = 0; i < GRID_SIZE; ++i) {
         for (int j = 0; j < GRID_SIZE; ++j) {
             if (cells[i][j] == EMPTY) {
-                continue;  // skip empty cells
+                continue;
             }
 
-            int num = cells[i][j] - 1;  // 0-based
+            int num = cells[i][j] - 1; 
             int boxIdx = getBoxIndex(i, j);
 
             if (row[i][num] || col[j][num] || box[boxIdx][num]) {
@@ -149,10 +234,6 @@ bool Grid::isComplete() const {
         }
     }
     return isValid();
-}
-
-int Grid::getBoxIndex(int row, int col) {
-    return (row / SUBGRID_SIZE) * SUBGRID_SIZE + (col / SUBGRID_SIZE);
 }
 
 void Grid::printBoard() const {
@@ -186,4 +267,51 @@ void Grid::prettyPrintBoard() const {
     }
     oss << "-------------------------\n";
     std::cout << oss.str();
+}
+
+int Grid::getBoxIndex(int row, int col) const {
+    return (row / SUBGRID_SIZE) * SUBGRID_SIZE + (col / SUBGRID_SIZE);
+}
+
+void Grid::updateAllCandidates() {
+    for (int row = 0; row < GRID_SIZE; ++row) {
+        for (int col = 0; col < GRID_SIZE; ++col) {
+            if (cells[row][col] != EMPTY) {
+                candidates[row][col].clear();
+            }
+        }
+    }
+
+    std::array<std::set<int>, GRID_SIZE> rowForbidden;
+    std::array<std::set<int>, GRID_SIZE> colForbidden;
+    std::array<std::set<int>, GRID_SIZE> boxForbidden;
+
+    for (int row = 0; row < GRID_SIZE; ++row) {
+        for (int col = 0; col < GRID_SIZE; ++col) {
+            const int val = cells[row][col];
+            if (val != EMPTY) {
+                rowForbidden[row].insert(val);
+                colForbidden[col].insert(val);
+                boxForbidden[getBoxIndex(row, col)].insert(val);
+            }
+        }
+    }
+
+    for (int row = 0; row < GRID_SIZE; ++row) {
+        for (int col = 0; col < GRID_SIZE; ++col) {
+            if (cells[row][col] == EMPTY) {
+                std::set<int> possible;
+                const int boxIdx = getBoxIndex(row, col);
+                
+                for (int num : ALL_CANDIDATES) {
+                    if (!rowForbidden[row].count(num) &&
+                        !colForbidden[col].count(num) && 
+                        !boxForbidden[boxIdx].count(num)) {
+                        possible.insert(num);
+                    }
+                }
+                candidates[row][col] = std::move(possible);
+            }
+        }
+    }
 }
